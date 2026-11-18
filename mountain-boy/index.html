@@ -354,16 +354,14 @@ addEventListener("resize", () => {
 });
 
 /* ---------------- main loop ---------------- */
-const clock = new THREE.Clock();
+const params = new URLSearchParams(location.search);
+const OFFLINE = params.has("render");
+const clock = !OFFLINE ? new THREE.Clock() : null;
 const WALK_SPEED = 2.1;
 const sunOffset = new THREE.Vector3(28, 44, 18);
-let uDist = 0;
+let uDist = 0, simT = 0;
 
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
-
+function simulate(dt, t) {
   if (started) uDist += dt * WALK_SPEED;
   const u = (uDist / pathLen) % 1;
 
@@ -415,10 +413,29 @@ function animate() {
 
   renderer.render(scene, camera);
 }
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  simulate(dt, clock.elapsedTime);
+}
+if (OFFLINE) {
+  renderer.setPixelRatio(1);
+  const h = parseInt(params.get("h") || "720");
+  renderer.setSize(Math.round(h * 16 / 9), h, false);
+  if (params.get("shadows") !== "1") renderer.shadowMap.enabled = false;
+  window.__start = () => {
+    started = true;
+    fadeDiv.style.opacity = 0;
+    document.getElementById("start").style.display = "none";
+  };
+  window.__step = (dts) => { simT += dts; simulate(dts, simT); };
+} else {
+  animate();
+}
 SHOTS[0].get(sState, camPos, camLook);
 prevPos.copy(camPos);
 prevLook.copy(camLook);
-animate();
+simulate(0, 0);
 </script>
 </body>
 </html>
