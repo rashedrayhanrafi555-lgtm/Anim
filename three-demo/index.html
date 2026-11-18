@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three.js Demo — The King's Crown</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1526; overflow: hidden; }
+  #app { width: 100%; height: 100%; }
+  #hud {
+    position: fixed; left: 0; right: 0; bottom: 24px; text-align: center;
+    color: #d4af37; font: 600 16px/1.4 system-ui, sans-serif;
+    letter-spacing: 2px; text-shadow: 0 2px 6px rgba(0,0,0,.6); pointer-events: none;
+  }
+</style>
+<script type="importmap">
+  { "imports": { "three": "./three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud">THE KING'S CROWN — THREE.JS DEMO (DRAG TO ORBIT)</div>
+<script type="module">
+import * as THREE from "three";
+
+const GOLD = 0xd4af37;
+const NAVY = 0x16223c;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.getElementById("app").appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(NAVY);
+scene.fog = new THREE.Fog(NAVY, 6, 14);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.4, 5);
+
+const key = new THREE.DirectionalLight(0xfff3d0, 2.2);
+key.position.set(3, 4, 4);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x8fa7ff, 1.1);
+rim.position.set(-4, 2, -3);
+scene.add(rim);
+scene.add(new THREE.AmbientLight(0x404866, 1.2));
+
+const goldMat = new THREE.MeshStandardMaterial({ color: GOLD, metalness: 0.85, roughness: 0.3 });
+const darkMat = new THREE.MeshStandardMaterial({ color: 0x0a0f1e, metalness: 0.4, roughness: 0.6 });
+const rubyMat = new THREE.MeshStandardMaterial({ color: 0x9b1b30, metalness: 0.3, roughness: 0.25, emissive: 0x40060f });
+
+const crown = new THREE.Group();
+
+const band = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.08, 0.5, 48), goldMat);
+band.position.y = 0.25;
+crown.add(band);
+
+const spikes = 8;
+for (let i = 0; i < spikes; i++) {
+  const a = (i / spikes) * Math.PI * 2;
+  const spike = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.9, 16), goldMat);
+  spike.position.set(Math.cos(a) * 0.95, 0.95, Math.sin(a) * 0.95);
+  crown.add(spike);
+  if (i % 2 === 0) {
+    const gem = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), rubyMat);
+    gem.position.set(Math.cos(a) * 0.95, 0.35, Math.sin(a) * 0.95);
+    crown.add(gem);
+  }
+}
+
+const cushion = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 16, 0, Math.PI * 2, Math.PI, Math.PI / 2), darkMat);
+cushion.scale.y = 0.6;
+cushion.position.y = -0.05;
+crown.add(cushion);
+crown.position.y = 0.4;
+scene.add(crown);
+
+let isDragging = false, lastX = 0, spin = 0;
+addEventListener("pointerdown", e => { isDragging = true; lastX = e.clientX; });
+addEventListener("pointerup", () => { isDragging = false; });
+addEventListener("pointermove", e => {
+  if (!isDragging) return;
+  spin += (e.clientX - lastX) * 0.005;
+  lastX = e.clientX;
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+function loop() {
+  const t = clock.getElapsedTime();
+  if (!isDragging) spin += 0.004;
+  crown.rotation.y = spin;
+  crown.position.y = 0.4 + Math.sin(t * 1.4) * 0.08;
+  crown.rotation.z = Math.sin(t * 0.9) * 0.03;
+  camera.position.x = Math.sin(t * 0.12) * 0.4;
+  camera.lookAt(0, 0.55, 0);
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
